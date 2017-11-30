@@ -17,4 +17,4 @@ EMAX RS2205-S 2300KV Motors
 
 EMAX 30A DShot Bullet Series BLHeli-S ESCs
 
-3D-Printed Frame: T4 Quadcopter Mini 250 Drone (5 inch props) https://www.thingiverse.com/thing:304237.
+3D-Printed Frame: T4 Quadcopter Mini 250 Drone (5 inch props): https://www.thingiverse.com/thing:304237.
