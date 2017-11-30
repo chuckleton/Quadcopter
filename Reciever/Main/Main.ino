@@ -1,3 +1,5 @@
+#include <EnableInterrupt.h>
+
 /*
 Copyright 2011 Lex Talionis (Lex.V.Talionis at gmail)
 This program is free software: you can redistribute it 
@@ -33,14 +35,14 @@ Timer1 library to record the time between.
 #define RC_YAW 6
 #define RC_KP 5
 
-#define LOOP_TIME 8
+#define LOOP_TIME 15
 #define OFF SERVOMIN
 
 byte pin[] = {RC_PWR, RC_RLL, RC_PTCH, RC_YAW, RC_KP};    //for maximum efficiency these pins should be attached
 
 const int PINS[4][PIN_COUNT] = {                //Pins for radio with adjustment parameters
-  {1092, 1078, 1038, 1044, 1056},           //Lower bound (raw)
-  {1870, 1814, 1854, 1869, 1869},           //Upper bound (raw)
+  {1104, 1056, 1028, 1044, 1060},           //Lower bound (raw)
+  {1776, 1688, 1850, 1872, 1876},           //Upper bound (raw)
   {SERVOMIN, -100, -100, -30, 0},                //Lower Bound (adjusted)     //45
   {SERVOMAX - (SERVOMIN/10), 100, 100, 30, 254},               //Upper Bound (adjusted)     //130
 };
@@ -54,7 +56,9 @@ byte i = 0;     // global counter for tracking what pin we are on
 
 unsigned long lastSend = 0;
 
-volatile unsigned int time[] = {0,0,0,0,0};                // to the receiver's channels in the order listed here
+uint16_t rc_values[PIN_COUNT];
+uint32_t rc_start[PIN_COUNT];
+volatile uint16_t rc_shared[PIN_COUNT];                // to the receiver's channels in the order listed here
 volatile int inputs[] = {0,0,0,0,0};                       // to the receiver's channels in the order listed here
 //double finalInputs[] = {0.0,0.0,0.0,0.0};
 
@@ -67,15 +71,22 @@ void setup(){
 void loop(){
   if(millis() - lastSend > LOOP_TIME){
     printData();
+    //outputRadioValues();
+    lastSend = millis();
+    //Serial.println(time[0]);
   }
-  updateInterrupts();
+  rc_read_values();
+  delay(1);
+  //updateInterrupts();
 }
 
 void printData(){
+  mapRadioValues();
   for(int i = 0;i < PIN_COUNT;i++){
-    Serial.print((byte)inputs[i]);
+    Serial.write(byte(inputs[i]));
   }
-  Serial.print(byte(255));
+  Serial.write(byte(255));
+  //Serial.println();
 }
 
 void getRadioValues(){
@@ -97,18 +108,45 @@ void radioSetup() {
     pinMode(pin[i], INPUT);     //set the pin to input
     digitalWrite(pin[i], HIGH); //use the internal pullup resistor
   }
-  attachInterrupt(pin[i], rise, RISING); // attach a PinChange Interrupt to our first pin
+  enableInterrupt(pin[0], calc_ch1, CHANGE);
+  enableInterrupt(pin[1], calc_ch2, CHANGE);
+  enableInterrupt(pin[2], calc_ch3, CHANGE);
+  enableInterrupt(pin[3], calc_ch4, CHANGE);
+  enableInterrupt(pin[4], calc_ch5, CHANGE);
+  //attachInterrupt(pin[i], rise, RISING); // attach a PinChange Interrupt to our first pin
+}
+
+void calc_ch1() { calc_input(0, pin[0]); }
+void calc_ch2() { calc_input(1, pin[1]); }
+void calc_ch3() { calc_input(2, pin[2]); }
+void calc_ch4() { calc_input(3, pin[3]); }
+void calc_ch5() { calc_input(4, pin[4]); }
+
+void calc_input(uint8_t channel, uint8_t input_pin) {
+  //Serial.println(channel);
+  if (digitalRead(input_pin) == HIGH) {
+    rc_start[channel] = micros();
+  } else {
+    uint16_t rc_compare = (uint16_t)(micros() - rc_start[channel]);
+    rc_shared[channel] = rc_compare;
+  }
+}
+
+void rc_read_values() {
+  noInterrupts();
+  memcpy(rc_values, (const void *)rc_shared, sizeof(rc_shared));
+  interrupts();
 }
 
 void mapRadioValues() {
   for (byte i = 0; i < PIN_COUNT; i++)
   {
-    if (time[i] > 800) {                                   //Eliminate bad values
+    if (rc_values[i] > 800) {                                   //Eliminate bad values
       //Map values to servo outputs
       if(i == 1 || i == 3){
-        inputs[i] = -(double)map(time[i], PINS[0][i], PINS[1][i], PINS[2][i], PINS[3][i]);
+        inputs[i] = -(double)map(rc_values[i], PINS[0][i], PINS[1][i], PINS[2][i], PINS[3][i]);
       }else{
-        inputs[i] = (double)map(time[i], PINS[0][i], PINS[1][i], PINS[2][i], PINS[3][i]);
+        inputs[i] = (double)map(rc_values[i], PINS[0][i], PINS[1][i], PINS[2][i], PINS[3][i]);
       }
       inputs[i] = constrain(inputs[i], PINS[2][i], PINS[3][i]);
     } else {
@@ -136,7 +174,7 @@ void outputRadioValues() {
   {
     Serial.print(labels[i]);
     Serial.print(F(":"));
-    Serial.print(time[i], DEC);
+    Serial.print(inputs[i], DEC);
     Serial.print(F("\t"));
   }
   Serial.print(burp, DEC);
@@ -151,8 +189,9 @@ void outputRadioValues() {
   //cmd=0;
 
 }
-
+/*
 void updateInterrupts() {
+  Serial.println(state);
   switch (state)
   {
     case RISING: //we have just seen a rising edge
@@ -169,8 +208,8 @@ void updateInterrupts() {
       break;
   }
 }
-
-void resetInterrupts() {
+*/
+/*void resetInterrupts() {
   detachInterrupt(pin[i]);
   attachInterrupt(pin[i], rise, RISING);
   state = 255;
@@ -181,17 +220,18 @@ void rise()        //on the rising edge of the currently interesting pin
   Timer1.restart();        //set our stopwatch to 0
   Timer1.start();            //and start it up
   state = RISING;
+  Serial.println("rise");
   burp++;
 }
 
 void fall()        //on the falling edge of the signal
 {
   state = FALLING;
-  time[i] = Timer1.read();  // The function below has been ported into the
+  rc_shared[i] = Timer1.read();  // The function below has been ported into the
   // the latest TimerOne class, if you have the
   // new Timer1 lib you can use this line instead
   /*if(i == 0){
     Serial.println(time[i]);
-    }*/
+    }*//*
   Timer1.stop();
-}
+}*/

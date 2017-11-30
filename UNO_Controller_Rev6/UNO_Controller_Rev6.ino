@@ -6,10 +6,10 @@
 #define SUPPRESS_YAW_CONTROL 1              //Control Quad Yaw (1 = NO)
 
 //DEBUG parameters
-//#define PRINT_DEBUG                         //Print info over Serial (115200 baud)
+#define PRINT_DEBUG                         //Print info over Serial (115200 baud)
 #define PRINT_ATTITUDE 0                    //Print Roll, Pitch, and Yaw angles
 #define PRINT_RC_VALUES 0                   //Print adjusted RC inputs
-#define PRINT_GAINS 0                       //Print PID Gains
+#define PRINT_GAINS 1                       //Print PID Gains
 #define PRINT_CONTROL 0                     //Print control values from PID
 #define PRINT_OUTPUTS 0                     //Print final motor speeds
 #define PRINT_DT 0                          //Print loop refresh rate
