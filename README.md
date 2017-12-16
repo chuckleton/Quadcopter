@@ -1,13 +1,13 @@
 # Quadcopter
 
-Code for a quadcopter using an Arduino UNO as the controller.
+Code for a quadcopter using an Arduino UNO or Intel Edison Arduino Breakout as the controller.
 
 
 Current setup:
 
-Arduino UNO as main controller
+Arduino UNO or Intel Edison as main controller
 
-Arduino Nano recieves RC values from a Turnigy 9x reciever and sends them over Serial at 115200 baud to the Arduino UNO. (This is because the arduino cannot be multithreaded and reading RC values needs to be done by reading pwm signals with interrupts but reading and writing i2c values to the IMU cannot be interrupted so the RC reading would have a very low frequency of getting new data if it was done on the UNO).
+Arduino Nano recieves RC values from a Turnigy 9x reciever and sends them over Serial at 115200 baud to the Arduino UNO/Edison. (This is because the arduino cannot be multithreaded and reading RC values needs to be done by reading pwm signals with interrupts but reading and writing i2c values to the IMU cannot be interrupted so the RC reading would have a very low frequency of getting new data if it was done on the UNO).
 
 IMU: MPU-9250 (Sparkfun Breakout): using i2c communication
 
