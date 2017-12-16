@@ -109,7 +109,7 @@ void updateIMU() {
     myIMU.gx = (float)myIMU.gyroCount[0] * myIMU.gRes;
     myIMU.gy = (float)myIMU.gyroCount[1] * myIMU.gRes;
     myIMU.gz = (float)myIMU.gyroCount[2] * myIMU.gRes;
-    /*
+    
     myIMU.readMagData(myIMU.magCount);  // Read the x/y/z adc values
     myIMU.getMres();
     // User environmental x-axis correction in milliGauss, should be
@@ -129,12 +129,12 @@ void updateIMU() {
     myIMU.my = (float)myIMU.magCount[1] * myIMU.mRes * myIMU.magCalibration[1] -
                myIMU.magbias[1];
     myIMU.mz = (float)myIMU.magCount[2] * myIMU.mRes * myIMU.magCalibration[2] -
-               myIMU.magbias[2];*/
+               myIMU.magbias[2];
   } // if (readByte(MPU9250_ADDRESS, INT_STATUS) & 0x01)
 
   // Must be called before updating quaternions!
   myIMU.updateTime();
-  /*
+  
   // Sensors x (y)-axis of the accelerometer is aligned with the y (x)-axis of
   // the magnetometer; the magnetometer z-axis (+ down) is opposite to z-axis
   // (+ up) of accelerometer and gyro! We have to make some allowance for this
@@ -165,22 +165,23 @@ void updateIMU() {
   // For more see
   // http://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
   // which has additional links.
-  myIMU.yaw   = atan2(2.0f * (*(getQ() + 1) * *(getQ() + 2) + *getQ() *
+  /*myIMU.yaw   = atan2(2.0f * (*(getQ() + 1) * *(getQ() + 2) + *getQ() *
                               *(getQ() + 3)), *getQ() * *getQ() + * (getQ() + 1) * *(getQ() + 1)
                       - * (getQ() + 2) * *(getQ() + 2) - * (getQ() + 3) * *(getQ() + 3));
+  */
   myIMU.pitch = -asin(2.0f * (*(getQ() + 1) * *(getQ() + 3) - *getQ() *
                               *(getQ() + 2)));
   myIMU.roll  = atan2(2.0f * (*getQ() * *(getQ() + 1) + * (getQ() + 2) *
                               *(getQ() + 3)), *getQ() * *getQ() - * (getQ() + 1) * *(getQ() + 1)
                       - * (getQ() + 2) * *(getQ() + 2) + * (getQ() + 3) * *(getQ() + 3));
   myIMU.pitch *= RAD_TO_DEG;
-  myIMU.yaw   *= RAD_TO_DEG;
+  //myIMU.yaw   *= RAD_TO_DEG;
   // Declination of SparkFun Electronics (40°05'26.6"N 105°11'05.9"W) is
   //   8° 30' E  ± 0° 21' (or 8.5°) on 2016-07-19
   // - http://www.ngdc.noaa.gov/geomag-web/#declination
-  myIMU.yaw   -= 12.95;
+  //myIMU.yaw   -= 12.95;
   myIMU.roll  *= RAD_TO_DEG;
-  
+  /*
   rates[0] = myIMU.gx;
   rates[1] = myIMU.gy;
   rates[2] = myIMU.gz;*/

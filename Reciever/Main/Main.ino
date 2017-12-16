@@ -17,13 +17,15 @@ to notice when the signal pin goes high and low, and the
 Timer1 library to record the time between.
 */
 
+#define USE_RATE_PID
+
 #define SERVO_FREQ 200                      //Frequency at which to update servo values
 #define SERVOMIN 80*(1000000/SERVO_FREQ)/4096   //Minimum servo value (~1000 us)
-#define SERVOMAX 2*SERVOMIN                 //Max servo value (~2000 us)
+#define SERVOMAX 2.35*SERVOMIN                 //Max servo value (~2000 us)
 
 #define NO_PORTB_PINCHANGES     //PinChangeInt setup
 #define NO_PORTC_PINCHANGES    //only port D pinchanges (see: http://playground.arduino.cc/Learning/Pins)
-#define PIN_COUNT 5           //number of channels attached to the receiver
+#define PIN_COUNT 6           //number of channels attached to the receiver
 #define MAX_PIN_CHANGE_PINS PIN_COUNT
 
 #include "PinChangeInt.h"    // http://playground.arduino.cc/Main/PinChangeInt
@@ -34,20 +36,32 @@ Timer1 library to record the time between.
 #define RC_PTCH 3
 #define RC_YAW 6
 #define RC_KP 5
+#define RC_ARM 7
 
 #define LOOP_TIME 15
 #define OFF SERVOMIN
 
-byte pin[] = {RC_PWR, RC_RLL, RC_PTCH, RC_YAW, RC_KP};    //for maximum efficiency these pins should be attached
+byte pin[] = {RC_PWR, RC_RLL, RC_PTCH, RC_YAW, RC_KP, RC_ARM};    //for maximum efficiency these pins should be attached
 
-const int PINS[4][PIN_COUNT] = {                //Pins for radio with adjustment parameters
-  {1104, 1056, 1028, 1044, 1060},           //Lower bound (raw)
-  {1776, 1688, 1850, 1872, 1876},           //Upper bound (raw)
-  {SERVOMIN, -100, -100, -30, 0},                //Lower Bound (adjusted)     //45
-  {SERVOMAX - (SERVOMIN/10), 100, 100, 30, 254},               //Upper Bound (adjusted)     //130
-};
+#ifdef USE_RATE_PID
+  const int PINS[4][PIN_COUNT] = {                //Pins for radio with adjustment parameters
+    {1104, 1096, 1028, 1044, 1060, 1044},           //Lower bound (raw)
+    {1776, 1688, 1850, 1872, 1876, 1842},           //Upper bound (raw)
+    {SERVOMIN, -100, -100, -30, 0, 0},                //Lower Bound (adjusted)     //45
+    {SERVOMAX - (SERVOMIN/10), 100, 100, 30, 254, 1},               //Upper Bound (adjusted)     //130
+  };
+#else
+  const int PINS[4][PIN_COUNT] = {                //Pins for radio with adjustment parameters
+    {1104, 1096, 1028, 1044, 1060, 1044},           //Lower bound (raw)
+    {1776, 1688, 1850, 1872, 1876, 1842},           //Upper bound (raw)
+    {SERVOMIN, -30, -30, -30, 0, 0},                //Lower Bound (adjusted)     //45
+    {SERVOMAX - (SERVOMIN/10), 30, 30, 30, 254, 1},               //Upper Bound (adjusted)     //130
+  };
+#endif
 
-String labels[] = {"PWR", "RLL", "PTCH", "YAW", "KP"};
+const int armAve = (PINS[0][PIN_COUNT - 1] + PINS[1][PIN_COUNT - 1]) / 2;
+
+String labels[] = {"PWR", "RLL", "PTCH", "YAW", "KP", "ARMED"};
 
 byte state = 0;
 byte burp = 0;  // a counter to see how many times the int has executed
@@ -59,7 +73,7 @@ unsigned long lastSend = 0;
 uint16_t rc_values[PIN_COUNT];
 uint32_t rc_start[PIN_COUNT];
 volatile uint16_t rc_shared[PIN_COUNT];                // to the receiver's channels in the order listed here
-volatile int inputs[] = {0,0,0,0,0};                       // to the receiver's channels in the order listed here
+volatile int inputs[] = {0,0,0,0,0,0};                       // to the receiver's channels in the order listed here
 //double finalInputs[] = {0.0,0.0,0.0,0.0};
 
 void setup(){
@@ -113,6 +127,7 @@ void radioSetup() {
   enableInterrupt(pin[2], calc_ch3, CHANGE);
   enableInterrupt(pin[3], calc_ch4, CHANGE);
   enableInterrupt(pin[4], calc_ch5, CHANGE);
+  enableInterrupt(pin[5], calc_ch6, CHANGE);
   //attachInterrupt(pin[i], rise, RISING); // attach a PinChange Interrupt to our first pin
 }
 
@@ -121,6 +136,7 @@ void calc_ch2() { calc_input(1, pin[1]); }
 void calc_ch3() { calc_input(2, pin[2]); }
 void calc_ch4() { calc_input(3, pin[3]); }
 void calc_ch5() { calc_input(4, pin[4]); }
+void calc_ch6() { calc_input(5, pin[5]); }
 
 void calc_input(uint8_t channel, uint8_t input_pin) {
   //Serial.println(channel);
@@ -143,7 +159,13 @@ void mapRadioValues() {
   {
     if (rc_values[i] > 800) {                                   //Eliminate bad values
       //Map values to servo outputs
-      if(i == 1 || i == 3){
+      if(i == PIN_COUNT - 1){
+        if(rc_values[i] < armAve){
+          inputs[i] = PINS[2][PIN_COUNT - 1];
+        }else{
+          inputs[i] = PINS[3][PIN_COUNT - 1];
+        }
+      }else if(i == 1 || i == 3){
         inputs[i] = -(double)map(rc_values[i], PINS[0][i], PINS[1][i], PINS[2][i], PINS[3][i]);
       }else{
         inputs[i] = (double)map(rc_values[i], PINS[0][i], PINS[1][i], PINS[2][i], PINS[3][i]);
@@ -151,6 +173,13 @@ void mapRadioValues() {
       inputs[i] = constrain(inputs[i], PINS[2][i], PINS[3][i]);
     } else {
       inputs[0] = OFF;
+    }
+    if(inputs[PIN_COUNT - 1] == 0){
+      inputs[0] = OFF;
+      inputs[1] = 0;
+      inputs[2] = 0;
+      inputs[3] = 0;
+      inputs[4] = 0;
     }
     //inputs[1] = -inputs[1];
     //inputs[3] = -inputs[3];

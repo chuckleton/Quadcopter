@@ -1,12 +1,13 @@
+#ifdef PRINT_DEBUG
 void Debug(){
-  /*if(PRINT_ATTITUDE == 1){
+  if(PRINT_ATTITUDE == 1){
     Serial.print(F("Attitude: "));
-    for(int i = 0;i < 3;i++){
-      Serial.print(angles[i]);
-      Serial.print(F(","));
-    }
-    Serial.println();
-  }*/
+    printIMUAngles();
+  }
+  if(PRINT_ATTITUDE_RATES == 1){
+    Serial.print(F("Attitude Rates: "));
+    printIMURates();
+  }
   if(PRINT_RC_VALUES == 1){
     Serial.print(F("R/C Values: "));
     for(int i = 0;i < NUMCH;i++){
@@ -18,6 +19,10 @@ void Debug(){
   if(PRINT_GAINS == 1){
     Serial.print(F("Kp: "));
     Serial.println(getGain(),4);
+  }
+  if(PRINT_ARMED == 1){
+    Serial.print(F("Armed: "));
+    Serial.println(ARMED);
   }
   if(PRINT_CONTROL == 1){
     Serial.print(F("Control Values: "));
@@ -41,40 +46,9 @@ void Debug(){
     Serial.print(F("BR: "));
     Serial.println(motVals[3]);
   }
-  /*if(PRINT_DT == 1){
-    Serial.print(F("Dt: "));
+  if(PRINT_DT == 1){
+    Serial.print(F("dt: "));
     Serial.print(dt);
-  }*/
-  /*if(PRINT_OLDPROPORTIONAL == 1){
-    Serial.print(F("OldProportional: "));
-    for(int i = 0;i < 3 - SUPPRESS_YAW_CONTROL;i++){
-      Serial.print(oldproportional[i]);
-      Serial.print(F(","));
-    }
-    Serial.println();
   }
-  if(PRINT_PROPORTIONAL == 1){
-    Serial.print(F("Proportional: "));
-    for(int i = 0;i < 3 - SUPPRESS_YAW_CONTROL;i++){
-      Serial.print(proportional[i]);
-      Serial.print(F(","));
-    }
-    Serial.println();
-  }
-  if(PRINT_INTEGRAL == 1){
-    Serial.print(F("Integral: "));
-    for(int i = 0;i < 3 - SUPPRESS_YAW_CONTROL;i++){
-      Serial.print(integral[i]);
-      Serial.print(F(","));
-    }
-    Serial.println();
-  }
-  if(PRINT_DERIVATIVE == 1){
-    Serial.print(F("Derivative: "));
-    for(int i = 0;i < 3 - SUPPRESS_YAW_CONTROL;i++){
-      Serial.print(derivative[i]);
-      Serial.print(F(","));
-    }
-    Serial.println();
-  }*/
 }
+#endif
