@@ -23,13 +23,7 @@ Timer1 library to record the time between.
 #define SERVOMIN 80*(1000000/SERVO_FREQ)/4096   //Minimum servo value (~1000 us)
 #define SERVOMAX 2.35*SERVOMIN                 //Max servo value (~2000 us)
 
-#define NO_PORTB_PINCHANGES     //PinChangeInt setup
-#define NO_PORTC_PINCHANGES    //only port D pinchanges (see: http://playground.arduino.cc/Learning/Pins)
 #define PIN_COUNT 6           //number of channels attached to the receiver
-#define MAX_PIN_CHANGE_PINS PIN_COUNT
-
-#include "PinChangeInt.h"    // http://playground.arduino.cc/Main/PinChangeInt
-#include "TimerOne.h"        // http://playground.arduino.cc/Code/Timer1
 
 #define RC_PWR 2    //Arduino pins attached to the receiver
 #define RC_RLL 4
@@ -74,7 +68,6 @@ uint16_t rc_values[PIN_COUNT];
 uint32_t rc_start[PIN_COUNT];
 volatile uint16_t rc_shared[PIN_COUNT];                // to the receiver's channels in the order listed here
 volatile int inputs[] = {0,0,0,0,0,0};                       // to the receiver's channels in the order listed here
-//double finalInputs[] = {0.0,0.0,0.0,0.0};
 
 void setup(){
   Serial.begin(115200);
@@ -87,11 +80,9 @@ void loop(){
     printData();
     //outputRadioValues();
     lastSend = millis();
-    //Serial.println(time[0]);
   }
   rc_read_values();
   delay(1);
-  //updateInterrupts();
 }
 
 void printData(){
@@ -100,22 +91,11 @@ void printData(){
     Serial.write(byte(inputs[i]));
   }
   Serial.write(byte(255));
-  //Serial.println();
-}
-
-void getRadioValues(){
-  mapRadioValues();
 }
 
 void radioSetup() {
-  //Serial.begin(115200);gest pulse in PPM is usually 2.1 milliseconds,
-  //pick a period that gives you a little headroom.
-  Timer1.stop();                //st
-  Serial.print("Starting Radio Reciever");
-  Serial.println();            //warm up the serial port
-
-  Timer1.initialize(2200);    //lonop the counter
-  Timer1.restart();            //set the clock to zero
+  //Serial.print("Starting Radio Reciever");
+  //Serial.println();            //warm up the serial port
 
   for (byte i = 0; i < PIN_COUNT; i++)
   {
@@ -128,7 +108,6 @@ void radioSetup() {
   enableInterrupt(pin[3], calc_ch4, CHANGE);
   enableInterrupt(pin[4], calc_ch5, CHANGE);
   enableInterrupt(pin[5], calc_ch6, CHANGE);
-  //attachInterrupt(pin[i], rise, RISING); // attach a PinChange Interrupt to our first pin
 }
 
 void calc_ch1() { calc_input(0, pin[0]); }
@@ -139,7 +118,6 @@ void calc_ch5() { calc_input(4, pin[4]); }
 void calc_ch6() { calc_input(5, pin[5]); }
 
 void calc_input(uint8_t channel, uint8_t input_pin) {
-  //Serial.println(channel);
   if (digitalRead(input_pin) == HIGH) {
     rc_start[channel] = micros();
   } else {
@@ -181,22 +159,10 @@ void mapRadioValues() {
       inputs[3] = 0;
       inputs[4] = 0;
     }
-    //inputs[1] = -inputs[1];
-    //inputs[3] = -inputs[3];
   }
-  /*for(int i = 0;i < 4;i++){
-    finalInputs[i] = (double)inputs[i];
-    }*/
-  //Kp[GAIN] = (float)inputs[4] / GAIN_DIVISOR;
-  //double gain = (double)inputs[4] / GAIN_DIVISOR;
-  //rollRatePID.SetTunings(gain, KiRoll, KdRoll);
-  //pitchRatePID.SetTunings(gain, KiPitch, KdPitch);
 }
 
 void outputRadioValues() {
-  //cmd=Serial.read();        //while you got some time gimme a systems report
-  //if (cmd=='p')
-  //{
   mapRadioValues();
 
   for (byte i = 0; i < PIN_COUNT; i++)
@@ -206,61 +172,5 @@ void outputRadioValues() {
     Serial.print(inputs[i], DEC);
     Serial.print(F("\t"));
   }
-  Serial.print(burp, DEC);
-  Serial.println();
-  /*Serial.print("\t");
-    Serial.print(clockCyclesToMicroseconds(Timer1.pwmPeriod), DEC);
-    Serial.print("\t");
-    Serial.print(Timer1.clockSelectBits, BIN);
-    Serial.print("\t");
-    Serial.println(ICR1, DEC);*/
-  //}
-  //cmd=0;
-
-}
-/*
-void updateInterrupts() {
-  Serial.println(state);
-  switch (state)
-  {
-    case RISING: //we have just seen a rising edge
-      detachInterrupt(pin[i]);
-      attachInterrupt(pin[i], fall, FALLING); //attach the falling end
-      state = 255;
-      break;
-    case FALLING: //we just saw a falling edge
-      detachInterrupt(pin[i]);
-      i++;                //move to the next pin
-      i = i % PIN_COUNT;  //i ranges from 0 to PIN_COUNT
-      attachInterrupt(pin[i], rise, RISING);
-      state = 255;
-      break;
-  }
-}
-*/
-/*void resetInterrupts() {
-  detachInterrupt(pin[i]);
-  attachInterrupt(pin[i], rise, RISING);
-  state = 255;
 }
 
-void rise()        //on the rising edge of the currently interesting pin
-{
-  Timer1.restart();        //set our stopwatch to 0
-  Timer1.start();            //and start it up
-  state = RISING;
-  Serial.println("rise");
-  burp++;
-}
-
-void fall()        //on the falling edge of the signal
-{
-  state = FALLING;
-  rc_shared[i] = Timer1.read();  // The function below has been ported into the
-  // the latest TimerOne class, if you have the
-  // new Timer1 lib you can use this line instead
-  /*if(i == 0){
-    Serial.println(time[i]);
-    }*//*
-  Timer1.stop();
-}*/
